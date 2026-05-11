@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Photo Validation
+    function isValidPhoto(data) {
+      return data.keys().hasAll(['title', 'url', 'storagePath', 'userId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000 &&
+             data.storagePath is string && data.storagePath.size() <= 1000 &&
+             data.userId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // Album Validation
+    function isValidAlbum(data) {
+      return data.keys().hasAll(['title', 'userId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 100 &&
+             data.userId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    match /photos/{photoId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPhoto(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && 
+                      isValidPhoto(request.resource.data) &&
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    match /albums/{albumId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidAlbum(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && 
+                      isValidAlbum(request.resource.data) &&
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+  }
+}
