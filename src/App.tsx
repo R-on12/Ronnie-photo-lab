@@ -444,39 +444,6 @@ export default function App() {
                 className="h-full"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
-                  {/* Summary Bento Card */}
-                  <div className="bg-neutral-900 rounded-3xl border border-neutral-800 p-8 flex flex-col justify-between group hover:border-blue-500/30 transition-colors">
-                    <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500">
-                      <ImageIcon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-4xl font-bold text-white tracking-tighter">{photos.length}</p>
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Total Assets</p>
-                    </div>
-                  </div>
-
-                  {/* Album Bento Card */}
-                  <div className="bg-neutral-900 rounded-3xl border border-neutral-800 p-8 flex flex-col justify-between group hover:border-emerald-500/30 transition-colors">
-                    <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                      <AlbumIcon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-4xl font-bold text-white tracking-tighter">{albums.length}</p>
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Curated Collections</p>
-                    </div>
-                  </div>
-
-                  {/* Upload Bento Card */}
-                  <div 
-                    onClick={() => setView('dashboard')}
-                    className="md:col-span-2 bg-neutral-900/30 border-2 border-dashed border-neutral-800 rounded-3xl flex flex-col items-center justify-center gap-2 hover:border-blue-500/50 transition-all cursor-pointer group"
-                  >
-                    <div className="p-3 bg-neutral-900 rounded-xl group-hover:scale-110 transition-transform">
-                      <Plus className="w-6 h-6 text-blue-500" />
-                    </div>
-                    <p className="text-sm text-neutral-400 font-medium">Add new memories</p>
-                  </div>
-
                   {filteredPhotos.map((photo, index) => (
                     <PhotoCard 
                       key={photo.id} 
