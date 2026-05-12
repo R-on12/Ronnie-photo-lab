@@ -54,8 +54,8 @@ const Sidebar = ({
   return (
     <aside className="w-64 h-full border-r border-neutral-800 p-6 flex flex-col gap-8 flex-shrink-0 hidden lg:flex">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">L</div>
-        <span className="text-xl font-semibold tracking-tight text-white font-sans">LUMINA</span>
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">C</div>
+        <span className="text-xl font-semibold tracking-tight text-white font-sans uppercase">Coope</span>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -403,7 +403,7 @@ export default function App() {
                   <Camera className="w-12 h-12 text-blue-500" />
                 </div>
                 <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-tighter mb-6 bg-gradient-to-br from-white to-neutral-500 bg-clip-text text-transparent">
-                  Lumina Gallery
+                  Coopes Gallery
                 </h1>
                 <p className="max-w-xl mx-auto text-lg text-neutral-400 mb-12 leading-relaxed">
                   A high-performance sanctuary for your visual legacy. 
