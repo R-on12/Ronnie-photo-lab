@@ -307,6 +307,18 @@ export default function App() {
     return unsub;
   }, []);
 
+  const handleFirestoreError = (error: unknown, operation: string, path: string | null) => {
+    const info = {
+      error: error instanceof Error ? error.message : String(error),
+      operation,
+      path,
+      userId: auth.currentUser?.uid,
+      authReady: !!auth.currentUser
+    };
+    console.error('Firestore/Storage Error:', JSON.stringify(info));
+    alert(`Error: ${info.error}`); // Simple feedback for the user
+  };
+
   const handleUpload = async (files: File[], title: string, description: string, albumId?: string) => {
     if (!user) return;
     setIsUploading(true);
@@ -314,18 +326,30 @@ export default function App() {
       for (const file of files) {
         const storagePath = `photos/${user.uid}/${Date.now()}-${file.name}`;
         const imageRef = ref(storage, storagePath);
-        await uploadBytes(imageRef, file);
+        
+        try {
+          await uploadBytes(imageRef, file);
+        } catch (err) {
+          handleFirestoreError(err, 'write_storage', storagePath);
+          throw err;
+        }
+
         const url = await getDownloadURL(imageRef);
         
-        await addDoc(collection(db, 'photos'), {
-          title: title || file.name,
-          description,
-          url,
-          storagePath,
-          albumId: albumId || null,
-          userId: user.uid,
-          createdAt: serverTimestamp()
-        });
+        try {
+          await addDoc(collection(db, 'photos'), {
+            title: title || file.name,
+            description,
+            url,
+            storagePath,
+            albumId: albumId || null,
+            userId: user.uid,
+            createdAt: serverTimestamp()
+          });
+        } catch (err) {
+          handleFirestoreError(err, 'create', 'photos');
+          throw err;
+        }
       }
       setView('gallery');
     } catch (err) {
@@ -341,7 +365,7 @@ export default function App() {
       const imageRef = ref(storage, photo.storagePath);
       await deleteObject(imageRef);
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, 'delete', `photos/${photo.id}`);
     }
   };
 
@@ -361,7 +385,7 @@ export default function App() {
         createdAt: serverTimestamp()
       });
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, 'create', 'albums');
     }
   };
 

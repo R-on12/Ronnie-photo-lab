@@ -26,7 +26,9 @@ service cloud.firestore {
              data.url is string && data.url.size() <= 1000 &&
              data.storagePath is string && data.storagePath.size() <= 1000 &&
              data.userId == request.auth.uid &&
-             data.createdAt == request.time;
+             data.createdAt == request.time &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+             (!('albumId' in data) || (data.albumId == null || (data.albumId is string && data.albumId.size() <= 128)));
     }
 
     // Album Validation
