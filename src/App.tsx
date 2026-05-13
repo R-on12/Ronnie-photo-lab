@@ -33,10 +33,11 @@ import {
   Filter,
   Camera
 } from 'lucide-react';
-import { db, auth, storage, signInWithGoogle, logout } from './lib/firebase';
+import { db, auth, signInWithGoogle, logout } from './lib/firebase';
 import { Photo, Album, View } from './types';
 import { cn } from './lib/utils';
 import { useDropzone } from 'react-dropzone';
+import { compressImage } from './lib/imageUtils';
 
 // --- Components ---
 
@@ -310,30 +311,34 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  enum OperationType {
+    CREATE = 'create',
+    UPDATE = 'update',
+    DELETE = 'delete',
+    LIST = 'list',
+    GET = 'get',
+    WRITE = 'write',
+  }
+
+  const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+      },
+      operationType,
+      path
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  };
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        // Fetch Photos
-        const q = query(
-          collection(db, 'photos'),
-          where('userId', '==', u.uid),
-          orderBy('createdAt', 'desc')
-        );
-        onSnapshot(q, (snapshot) => {
-          setPhotos(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Photo)));
-        });
-
-        // Fetch Albums
-        const aq = query(
-          collection(db, 'albums'),
-          where('userId', '==', u.uid),
-          orderBy('createdAt', 'desc')
-        );
-        onSnapshot(aq, (snapshot) => {
-          setAlbums(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Album)));
-        });
-      } else {
+      if (!u) {
         setPhotos([]);
         setAlbums([]);
         setView('home');
@@ -342,53 +347,72 @@ export default function App() {
     return unsub;
   }, []);
 
-  const handleFirestoreError = (error: unknown, operation: string, path: string | null) => {
-    const info = {
-      error: error instanceof Error ? error.message : String(error),
-      operation,
-      path,
-      userId: auth.currentUser?.uid,
-      authReady: !!auth.currentUser
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch Photos with filters as requested
+    const q = query(
+      collection(db, 'photos'),
+      where('userId', '==', user.uid),
+      where('albumId', '==', selectedAlbum)
+    );
+
+    const unsubPhotos = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Photo));
+      // In-memory sorting as requested to avoid composite indexes
+      const sorted = docs.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+      setPhotos(sorted);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'photos'));
+
+    // Fetch Albums
+    const aq = query(
+      collection(db, 'albums'),
+      where('userId', '==', user.uid)
+    );
+    const unsubAlbums = onSnapshot(aq, (snapshot) => {
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Album));
+      const sorted = docs.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+      setAlbums(sorted);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'albums'));
+
+    return () => {
+      unsubPhotos();
+      unsubAlbums();
     };
-    console.error('Firestore/Storage Error:', JSON.stringify(info));
-    alert(`Error: ${info.error}`); // Simple feedback for the user
-  };
+  }, [user, selectedAlbum]);
 
   const handleUpload = async (files: File[], title: string, description: string, albumId?: string) => {
     if (!user) return;
     setIsUploading(true);
     try {
       for (const file of files) {
-        const storagePath = `photos/${user.uid}/${Date.now()}-${file.name}`;
-        const imageRef = ref(storage, storagePath);
-        
-        try {
-          await uploadBytes(imageRef, file);
-        } catch (err) {
-          handleFirestoreError(err, 'write_storage', storagePath);
-          throw err;
-        }
-
-        const url = await getDownloadURL(imageRef);
+        // Compress and convert to base64
+        const base64Url = await compressImage(file);
         
         try {
           await addDoc(collection(db, 'photos'), {
             title: title || file.name,
             description,
-            url,
-            storagePath,
+            url: base64Url,
             albumId: albumId || null,
             userId: user.uid,
             createdAt: serverTimestamp()
           });
         } catch (err) {
-          handleFirestoreError(err, 'create', 'photos');
-          throw err;
+          handleFirestoreError(err, OperationType.CREATE, 'photos');
         }
       }
       setView('gallery');
     } catch (err) {
-      console.error(err);
+      console.error('Upload failed:', err);
     } finally {
       setIsUploading(false);
     }
@@ -397,10 +421,8 @@ export default function App() {
   const handleDelete = async (photo: Photo) => {
     try {
       await deleteDoc(doc(db, 'photos', photo.id));
-      const imageRef = ref(storage, photo.storagePath);
-      await deleteObject(imageRef);
     } catch (err) {
-      handleFirestoreError(err, 'delete', `photos/${photo.id}`);
+      handleFirestoreError(err, OperationType.DELETE, `photos/${photo.id}`);
     }
   };
 
@@ -420,15 +442,14 @@ export default function App() {
         createdAt: serverTimestamp()
       });
     } catch (err) {
-      handleFirestoreError(err, 'create', 'albums');
+      handleFirestoreError(err, OperationType.CREATE, 'albums');
     }
   };
 
   const filteredPhotos = photos.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || 
                          p.description?.toLowerCase().includes(search.toLowerCase());
-    const matchesAlbum = !selectedAlbum || p.albumId === selectedAlbum;
-    return matchesSearch && matchesAlbum;
+    return matchesSearch;
   });
 
   return (

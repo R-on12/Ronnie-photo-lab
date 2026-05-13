@@ -21,10 +21,9 @@ service cloud.firestore {
 
     // Photo Validation
     function isValidPhoto(data) {
-      return data.keys().hasAll(['title', 'url', 'storagePath', 'userId', 'createdAt']) &&
+      return data.keys().hasAll(['title', 'url', 'userId', 'createdAt']) &&
              data.title is string && data.title.size() <= 200 &&
-             data.url is string && data.url.size() <= 1000 &&
-             data.storagePath is string && data.storagePath.size() <= 1000 &&
+             data.url is string && data.url.size() <= 1100000 &&
              data.userId == request.auth.uid &&
              data.createdAt == request.time &&
              (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
@@ -41,7 +40,9 @@ service cloud.firestore {
 
     match /photos/{photoId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidPhoto(request.resource.data);
+      allow create: if isSignedIn() && isValidPhoto(request.resource.data) &&
+                      (request.resource.data.albumId == null || 
+                       get(/databases/$(database)/documents/albums/$(request.resource.data.albumId)).data.userId == request.auth.uid);
       allow update: if isSignedIn() && isOwner(resource.data.userId) && 
                       isValidPhoto(request.resource.data) &&
                       request.resource.data.userId == resource.data.userId;
