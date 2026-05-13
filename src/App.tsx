@@ -30,6 +30,8 @@ import {
   Moon,
   Sun,
   LayoutGrid,
+  Folder,
+  ChevronLeft,
   Filter,
   Camera
 } from 'lucide-react';
@@ -45,11 +47,13 @@ const Sidebar = ({
   user, 
   view, 
   setView,
+  setSelectedAlbum,
   onAddAlbum 
 }: { 
   user: User | null, 
   view: View, 
   setView: (v: View) => void,
+  setSelectedAlbum: (id: string | null) => void,
   onAddAlbum: () => void
 }) => {
   return (
@@ -61,7 +65,7 @@ const Sidebar = ({
 
       <nav className="flex flex-col gap-1">
         <button 
-          onClick={() => setView('gallery')}
+          onClick={() => { setView('gallery'); setSelectedAlbum(null); }}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all text-sm",
             view === 'gallery' ? "bg-neutral-100 dark:bg-neutral-900 text-blue-600 dark:text-blue-400" : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-900 dark:hover:text-neutral-100"
@@ -71,7 +75,7 @@ const Sidebar = ({
           All Photos
         </button>
         <button 
-          onClick={() => setView('albums')}
+          onClick={() => { setView('albums'); setSelectedAlbum(null); }}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all text-sm",
             view === 'albums' ? "bg-neutral-100 dark:bg-neutral-900 text-blue-600 dark:text-blue-400" : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-900 dark:hover:text-neutral-100"
@@ -81,7 +85,7 @@ const Sidebar = ({
           Albums
         </button>
         <button 
-          onClick={() => setView('home')}
+          onClick={() => { setView('home'); setSelectedAlbum(null); }}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all text-sm",
             view === 'home' ? "bg-neutral-100 dark:bg-neutral-900 text-blue-600 dark:text-blue-400" : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-900 dark:hover:text-neutral-100"
@@ -273,6 +277,40 @@ const PhotoCard = ({ photo, onClick, onDelete, isLarge }: { photo: Photo, onClic
   );
 };
 
+const AlbumFolder = ({ album, photoCount, onClick, onDelete }: { album: Album, photoCount: number, onClick: () => void, onDelete: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="group bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-6 relative cursor-pointer hover:border-blue-500/50 transition-all shadow-sm hover:shadow-xl"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+          <Folder className="w-8 h-8" />
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm('Delete this collection and all its organizational data? (Photos will remain in your main gallery)')) onDelete();
+          }}
+          className="p-2 text-neutral-400 hover:text-red-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-all"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          {album.title}
+        </h3>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">
+          {photoCount} {photoCount === 1 ? 'asset' : 'assets'}
+        </p>
+      </div>
+    </motion.div>
+  );
+};
+
 const Lightbox = ({ photo, onClose }: { photo: Photo, onClose: () => void }) => {
   return (
     <motion.div
@@ -372,16 +410,27 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch Photos with filters as requested
-    const q = query(
-      collection(db, 'photos'),
-      where('userId', '==', user.uid),
-      where('albumId', '==', selectedAlbum)
-    );
+    // Determine if we should filter by specific album
+    // If we're in gallery view or albums overview, we want all photos for counts and listing
+    // If we're in a specific album, we filter by that for performance/security
+    const needsAll = view === 'gallery' || (view === 'albums' && !selectedAlbum);
+    
+    let q;
+    if (needsAll) {
+      q = query(
+        collection(db, 'photos'),
+        where('userId', '==', user.uid)
+      );
+    } else {
+      q = query(
+        collection(db, 'photos'),
+        where('userId', '==', user.uid),
+        where('albumId', '==', selectedAlbum)
+      );
+    }
 
     const unsubPhotos = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Photo));
-      // In-memory sorting as requested to avoid composite indexes
       const sorted = docs.sort((a, b) => {
         const timeA = a.createdAt?.toMillis?.() || 0;
         const timeB = b.createdAt?.toMillis?.() || 0;
@@ -409,7 +458,18 @@ export default function App() {
       unsubPhotos();
       unsubAlbums();
     };
-  }, [user, selectedAlbum]);
+  }, [user, selectedAlbum, view]);
+
+  // Photo counts for albums logic:
+  // To keep it simple and efficient without fetching everything twice, 
+  // we'll calculate based on the current photos state if we are showing all.
+  // However, local filter is safer if we just fetch all user photos whenever user is on gallery or albums view.
+  const getAlbumPhotoCount = (aid: string) => {
+    // If we have all photos loaded, we can count. 
+    // In many cases we'll only have partial photos loaded if we are deep in an album.
+    // Let's stick to showing the UI for now.
+    return photos.filter(p => p.albumId === aid).length;
+  };
 
   const handleUpload = async (files: File[], title: string, description: string, albumId?: string) => {
     if (!user) return;
@@ -463,8 +523,18 @@ export default function App() {
         userId: user.uid,
         createdAt: serverTimestamp()
       });
+      if (view !== 'albums') setView('albums');
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'albums');
+    }
+  };
+
+  const handleDeleteAlbum = async (albumId: string) => {
+    try {
+      await deleteDoc(doc(db, 'albums', albumId));
+      if (selectedAlbum === albumId) setSelectedAlbum(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `albums/${albumId}`);
     }
   };
 
@@ -480,6 +550,7 @@ export default function App() {
         user={user} 
         view={view} 
         setView={setView} 
+        setSelectedAlbum={setSelectedAlbum}
         onAddAlbum={handleCreateAlbum} 
       />
 
@@ -540,7 +611,53 @@ export default function App() {
               </motion.section>
             )}
 
-            {(view === 'gallery' || view === 'albums') && (
+            {view === 'albums' && !selectedAlbum && (
+              <motion.section
+                key="albums-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-3xl font-bold text-neutral-900 dark:text-white">Your Collections</h2>
+                  <button 
+                    onClick={handleCreateAlbum}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    New Album
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {albums.map((album) => (
+                    <AlbumFolder 
+                      key={album.id} 
+                      album={album} 
+                      photoCount={getAlbumPhotoCount(album.id)} 
+                      onClick={() => setSelectedAlbum(album.id)}
+                      onDelete={() => handleDeleteAlbum(album.id)}
+                    />
+                  ))}
+                </div>
+                {albums.length === 0 && (
+                   <div className="h-full flex flex-col items-center justify-center text-neutral-500 py-32">
+                    <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center mb-6">
+                      <AlbumIcon className="w-8 h-8 opacity-20" />
+                    </div>
+                    <p className="text-lg font-medium">No collections created yet</p>
+                    <button 
+                      onClick={handleCreateAlbum}
+                      className="mt-4 text-blue-500 hover:underline font-medium"
+                    >
+                      Create your first album
+                    </button>
+                  </div>
+                )}
+              </motion.section>
+            )}
+
+            {(view === 'gallery' || (view === 'albums' && selectedAlbum)) && (
               <motion.section
                 key="gallery"
                 initial={{ opacity: 0 }}
@@ -548,6 +665,25 @@ export default function App() {
                 exit={{ opacity: 0 }}
                 className="h-full"
               >
+                {view === 'albums' && selectedAlbum && (
+                  <div className="flex items-center gap-4 mb-8">
+                    <button 
+                      onClick={() => setSelectedAlbum(null)}
+                      className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-xl transition-all"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <div>
+                      <h2 className="text-3xl font-bold text-neutral-900 dark:text-white">
+                        {albums.find(a => a.id === selectedAlbum)?.title || 'Album Content'}
+                      </h2>
+                      <p className="text-sm text-neutral-500 font-medium">
+                        {filteredPhotos.length} {filteredPhotos.length === 1 ? 'memory' : 'memories'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
                   {filteredPhotos.map((photo, index) => (
                     <PhotoCard 
@@ -562,7 +698,7 @@ export default function App() {
 
                 {filteredPhotos.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-neutral-500 py-32">
-                    <div className="w-20 h-20 bg-neutral-900 rounded-3xl border border-neutral-800 flex items-center justify-center mb-6">
+                    <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center mb-6">
                       <ImageIcon className="w-8 h-8 opacity-20" />
                     </div>
                     <p className="text-lg font-medium">No results matched your search</p>
