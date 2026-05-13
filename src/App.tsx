@@ -132,34 +132,54 @@ const Sidebar = ({
   );
 };
 
-const Header = ({ search, setSearch, setView, user }: { search: string, setSearch: (s: string) => void, setView: (v: View) => void, user: any }) => {
+const Header = ({ search, setSearch, setView, user, currentView }: { search: string, setSearch: (s: string) => void, setView: (v: View) => void, user: any, currentView: View }) => {
   return (
-    <header className="h-20 border-b border-neutral-800 px-8 flex items-center justify-between sticky top-0 bg-neutral-950/80 backdrop-blur-md z-40">
-      <div className="relative w-96 max-w-[50%] md:max-w-none">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-        <input 
-          type="text" 
-          placeholder="Search your memories..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-10 pr-4 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-neutral-600"
-        />
+    <header className="h-20 border-b border-neutral-800 px-4 md:px-8 flex items-center justify-between sticky top-0 bg-neutral-950/80 backdrop-blur-md z-40">
+      <div className="flex items-center gap-3 md:gap-4 flex-1">
+        <button 
+          onClick={() => setView('home')}
+          className="lg:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-sm text-white shrink-0"
+        >
+          C
+        </button>
+
+        <button 
+          onClick={() => setView('gallery')}
+          className={cn(
+            "lg:hidden p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-all shrink-0",
+            currentView === 'gallery' && "text-blue-500 border-blue-500/20"
+          )}
+        >
+          <LayoutGrid className="w-5 h-5" />
+        </button>
+        
+        <div className="relative w-full max-w-[180px] sm:max-w-xs md:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-500" />
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 pr-4 text-xs md:text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-neutral-600"
+          />
+        </div>
       </div>
-      <div className="flex items-center gap-4">
+      
+      <div className="flex items-center gap-2 md:gap-4">
         {user ? (
           <button 
             onClick={() => setView('dashboard')}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
           >
             <Plus className="w-4 h-4" />
-            Upload Image
+            <span className="hidden sm:inline">Upload</span>
           </button>
         ) : (
           <button 
             onClick={signInWithGoogle}
-            className="bg-white hover:bg-neutral-200 text-neutral-950 px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
+            className="bg-white hover:bg-neutral-200 text-neutral-950 px-4 md:px-5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 transition-all"
           >
-            Get Started
+            Sign In
           </button>
         )}
       </div>
@@ -411,6 +431,7 @@ export default function App() {
           setSearch={setSearch} 
           setView={setView} 
           user={user} 
+          currentView={view}
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
@@ -467,7 +488,7 @@ export default function App() {
                 exit={{ opacity: 0 }}
                 className="h-full"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
                   {filteredPhotos.map((photo, index) => (
                     <PhotoCard 
                       key={photo.id} 
@@ -543,27 +564,33 @@ const UploadDashboard = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6"
     >
-      <div className="lg:col-span-2 space-y-6">
-        <div className="bg-neutral-900 rounded-3xl border border-neutral-800 p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold bg-gradient-to-br from-white to-neutral-500 bg-clip-text text-transparent italic">
+      <div className="lg:col-span-2 space-y-4 md:space-y-6">
+        <div className="bg-neutral-900 rounded-2xl md:rounded-3xl border border-neutral-800 p-6 md:p-8">
+          <div className="flex justify-between items-center mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-br from-white to-neutral-500 bg-clip-text text-transparent italic">
               New Memory
             </h2>
+            <button 
+              onClick={onCancel}
+              className="lg:hidden p-2 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-500"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <div>
               <label className="block text-[10px] font-bold text-neutral-500 mb-2 uppercase tracking-widest">Metadata</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-5 py-4 bg-neutral-950 rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all text-neutral-100 font-medium placeholder:text-neutral-700"
+                className="w-full px-4 md:px-5 py-3 md:py-4 bg-neutral-950 rounded-xl md:rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all text-neutral-100 font-medium placeholder:text-neutral-700"
                 placeholder="Name your shot..."
               />
             </div>
@@ -571,16 +598,16 @@ const UploadDashboard = ({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-5 py-4 bg-neutral-950 rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all h-40 resize-none text-neutral-100 placeholder:text-neutral-700"
+                className="w-full px-4 md:px-5 py-3 md:py-4 bg-neutral-950 rounded-xl md:rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all h-32 md:h-40 resize-none text-neutral-100 placeholder:text-neutral-700"
                 placeholder="The story behind the lens..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
                 <select
                   value={albumId}
                   onChange={(e) => setAlbumId(e.target.value)}
-                  className="w-full px-5 py-4 bg-neutral-950 rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all text-neutral-100"
+                  className="w-full px-4 md:px-5 py-3 md:py-4 bg-neutral-950 rounded-xl md:rounded-2xl border border-neutral-800 outline-none focus:ring-1 ring-blue-500 transition-all text-neutral-100"
                 >
                   <option value="">No Collection</option>
                   {albums.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
@@ -589,7 +616,7 @@ const UploadDashboard = ({
               <button
                 onClick={() => onUpload(files, title, description, albumId)}
                 disabled={files.length === 0 || isUploading}
-                className="bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/40"
+                className="px-8 py-3 md:py-4 bg-blue-600 text-white rounded-xl md:rounded-2xl font-bold hover:bg-blue-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/40"
               >
                 {isUploading ? 'Securing...' : 'Publish'}
               </button>
@@ -598,9 +625,9 @@ const UploadDashboard = ({
         </div>
 
         {files.length > 0 && (
-          <div className="bg-neutral-900 rounded-3xl border border-neutral-800 p-6">
+          <div className="bg-neutral-900 rounded-2xl md:rounded-3xl border border-neutral-800 p-4 md:p-6">
             <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Assets ({files.length})</h3>
-            <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
               {files.map((file, i) => (
                 <div key={i} className="aspect-square rounded-xl bg-neutral-950 overflow-hidden relative group border border-neutral-800">
                   <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
@@ -621,15 +648,15 @@ const UploadDashboard = ({
         <div 
           {...getRootProps()} 
           className={cn(
-            "border-2 border-dashed rounded-[3rem] p-12 text-center transition-all cursor-pointer flex flex-col items-center justify-center h-full min-h-[400px]",
+            "border-2 border-dashed rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[250px] md:h-full md:min-h-[400px]",
             isDragActive ? "border-blue-500 bg-blue-500/5" : "border-neutral-800 hover:border-neutral-600 bg-neutral-950/20"
           )}
         >
           <input {...getInputProps()} />
-          <div className="p-6 bg-neutral-900 rounded-[2rem] border border-neutral-800 mb-6 shadow-2xl">
-            <Plus className="w-12 h-12 text-blue-500" />
+          <div className="p-4 md:p-6 bg-neutral-900 rounded-[1.5rem] md:rounded-[2rem] border border-neutral-800 mb-4 md:mb-6 shadow-2xl">
+            <Plus className="w-8 h-8 md:w-12 md:h-12 text-blue-500" />
           </div>
-          <p className="text-neutral-400 font-medium">Drop assets anywhere</p>
+          <p className="text-neutral-400 font-medium text-sm md:text-base">Drop assets anywhere</p>
           <p className="text-[10px] text-neutral-600 uppercase tracking-tighter mt-2 font-bold">RAW / JPEG / PNG supported</p>
         </div>
       </div>
