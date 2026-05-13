@@ -570,44 +570,57 @@ export default function App() {
             {view === 'home' && (
               <motion.section
                 key="home"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="h-full flex flex-col items-center justify-center text-center p-12 bg-white dark:bg-neutral-900/20 rounded-[3rem] border border-neutral-200 dark:border-neutral-800/50"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="h-[calc(100vh-160px)] flex flex-col items-center justify-center text-center p-12 relative overflow-hidden rounded-[3rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl"
               >
-                <div className="mb-8 p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20 text-blue-600 dark:text-blue-500">
-                  <Camera className="w-12 h-12" />
+                {/* Background Cover */}
+                <div className="absolute inset-0 z-0">
+                  <img 
+                    src="https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=2674&auto=format&fit=crop" 
+                    className="w-full h-full object-cover opacity-60 dark:opacity-40"
+                    referrerPolicy="no-referrer"
+                    alt="Showcase Cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 dark:from-transparent via-white/80 dark:via-neutral-950/80 to-white dark:to-neutral-950"></div>
                 </div>
-                <h1 className="text-5xl md:text-8xl font-cassandra tracking-tight mb-6 bg-gradient-to-br from-neutral-900 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent italic">
-                  Coopes Gallery
-                </h1>
-                <p className="max-w-xl mx-auto text-lg text-neutral-500 dark:text-neutral-400 mb-12 leading-relaxed">
-                  A high-performance sanctuary for your visual legacy. 
-                  Organize, explore, and showcase your photography in a refined bento-style interface.
-                </p>
-                {!user ? (
-                  <button 
-                    onClick={signInWithGoogle}
-                    className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20"
-                  >
-                    Start your collection
-                  </button>
-                ) : (
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <button 
-                      onClick={() => setView('gallery')}
-                      className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all"
-                    >
-                      Enter Gallery
-                    </button>
-                    <button 
-                      onClick={() => setView('dashboard')}
-                      className="px-10 py-4 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-2xl font-bold text-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all border border-neutral-200 dark:border-neutral-700"
-                    >
-                      Quick Upload
-                    </button>
+
+                <div className="relative z-10">
+                  <div className="mb-8 p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20 text-blue-600 dark:text-blue-500 inline-block backdrop-blur-sm">
+                    <Camera className="w-12 h-12" />
                   </div>
-                )}
+                  <h1 className="text-6xl md:text-9xl font-cassandra tracking-tight mb-6 bg-gradient-to-br from-neutral-900 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent italic">
+                    Coopes Gallery
+                  </h1>
+                  <p className="max-w-xl mx-auto text-lg md:text-xl text-neutral-600 dark:text-neutral-400 mb-12 leading-relaxed font-medium">
+                    A high-performance sanctuary for your visual legacy. 
+                    Organize, explore, and showcase your photography in a refined bento-style interface.
+                  </p>
+                  {!user ? (
+                    <button 
+                      onClick={signInWithGoogle}
+                      className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                    >
+                      Start your collection
+                    </button>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-6">
+                      <button 
+                        onClick={() => setView('gallery')}
+                        className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                      >
+                        Enter Gallery
+                      </button>
+                      <button 
+                        onClick={() => setView('dashboard')}
+                        className="px-10 py-4 bg-white/10 dark:bg-neutral-800 backdrop-blur-md text-neutral-900 dark:text-white rounded-2xl font-bold text-lg hover:bg-white/20 dark:hover:bg-neutral-700 transition-all border border-neutral-200 dark:border-neutral-700 active:scale-95"
+                      >
+                        Quick Upload
+                      </button>
+                    </div>
+                  )}
+                </div>
               </motion.section>
             )}
 
