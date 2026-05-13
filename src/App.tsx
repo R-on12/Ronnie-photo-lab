@@ -33,13 +33,15 @@ import {
   Folder,
   ChevronLeft,
   Filter,
-  Camera
+  Camera,
+  CloudDownload
 } from 'lucide-react';
 import { db, auth, signInWithGoogle, logout } from './lib/firebase';
 import { Photo, Album, View } from './types';
 import { cn } from './lib/utils';
 import { useDropzone } from 'react-dropzone';
 import { compressImage } from './lib/imageUtils';
+import { initGoogleClient, openDrivePicker, downloadDriveFile } from './services/googleDriveService';
 
 // --- Components ---
 
@@ -60,7 +62,7 @@ const Sidebar = ({
     <aside className="w-64 h-full border-r border-neutral-200 dark:border-neutral-800 p-6 flex flex-col gap-8 flex-shrink-0 hidden lg:flex bg-white dark:bg-neutral-950">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">C</div>
-        <span className="text-xl font-cassandra tracking-tight text-neutral-900 dark:text-white">Coopes</span>
+        <span className="text-xl font-cassandra tracking-tight text-neutral-900 dark:text-white">Coope</span>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -169,8 +171,20 @@ const Header = ({
             "lg:hidden p-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all shrink-0",
             currentView === 'gallery' && "text-blue-500 border-blue-500/20"
           )}
+          title="Gallery"
         >
           <LayoutGrid className="w-5 h-5" />
+        </button>
+
+        <button 
+          onClick={() => { setView('albums'); }}
+          className={cn(
+            "lg:hidden p-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all shrink-0",
+            currentView === 'albums' && "text-blue-500 border-blue-500/20"
+          )}
+          title="Albums"
+        >
+          <AlbumIcon className="w-5 h-5" />
         </button>
         
         <div className="relative w-full max-w-[180px] sm:max-w-xs md:max-w-sm">
@@ -404,6 +418,11 @@ export default function App() {
         setView('home');
       }
     });
+
+    initGoogleClient().catch(err => {
+      console.warn("Google Drive API failed to initialize (likely due to missing credentials):", err);
+    });
+
     return unsub;
   }, []);
 
@@ -508,9 +527,16 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
   };
 
   const handleCreateAlbum = async () => {
@@ -545,7 +571,7 @@ export default function App() {
   });
 
   return (
-    <div className="flex h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans overflow-hidden transition-colors duration-300">
       <Sidebar 
         user={user} 
         view={view} 
@@ -573,48 +599,48 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="h-[calc(100vh-160px)] flex flex-col items-center justify-center text-center p-12 relative overflow-hidden rounded-[3rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl"
+                className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center text-center p-6 md:p-12 relative overflow-hidden rounded-[2rem] md:rounded-[3rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl"
               >
                 {/* Background Cover */}
                 <div className="absolute inset-0 z-0">
                   <img 
                     src="https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=2674&auto=format&fit=crop" 
-                    className="w-full h-full object-cover opacity-60 dark:opacity-40"
+                    className="w-full h-full object-cover opacity-70 dark:opacity-40"
                     referrerPolicy="no-referrer"
                     alt="Showcase Cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 dark:from-transparent via-white/80 dark:via-neutral-950/80 to-white dark:to-neutral-950"></div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/30 dark:from-transparent via-white/90 dark:via-neutral-950/80 to-white dark:to-neutral-950"></div>
                 </div>
 
-                <div className="relative z-10">
-                  <div className="mb-8 p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20 text-blue-600 dark:text-blue-500 inline-block backdrop-blur-sm">
-                    <Camera className="w-12 h-12" />
+                <div className="relative z-10 w-full max-w-4xl mx-auto">
+                  <div className="mb-6 md:mb-8 p-3 md:p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20 text-blue-600 dark:text-blue-500 inline-block backdrop-blur-sm">
+                    <Camera className="w-8 h-8 md:w-12 md:h-12" />
                   </div>
-                  <h1 className="text-6xl md:text-9xl font-cassandra tracking-tight mb-6 bg-gradient-to-br from-neutral-900 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent italic">
+                  <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-cassandra tracking-tight mb-4 md:mb-6 bg-gradient-to-br from-neutral-950 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent italic leading-[1.1]">
                     Coopes Gallery
                   </h1>
-                  <p className="max-w-xl mx-auto text-lg md:text-xl text-neutral-600 dark:text-neutral-400 mb-12 leading-relaxed font-medium">
+                  <p className="max-w-xl mx-auto text-base md:text-lg lg:text-xl text-neutral-700 dark:text-neutral-400 mb-8 md:mb-12 leading-relaxed font-medium px-4">
                     A high-performance sanctuary for your visual legacy. 
                     Organize, explore, and showcase your photography in a refined bento-style interface.
                   </p>
                   {!user ? (
                     <button 
                       onClick={signInWithGoogle}
-                      className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                      className="px-8 md:px-10 py-3 md:py-4 bg-blue-600 text-white rounded-2xl font-bold text-base md:text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                     >
                       Start your collection
                     </button>
                   ) : (
-                    <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center px-4">
                       <button 
                         onClick={() => setView('gallery')}
-                        className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                        className="px-8 md:px-10 py-3 md:py-4 bg-blue-600 text-white rounded-2xl font-bold text-base md:text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 w-full sm:w-auto"
                       >
                         Enter Gallery
                       </button>
                       <button 
                         onClick={() => setView('dashboard')}
-                        className="px-10 py-4 bg-white/10 dark:bg-neutral-800 backdrop-blur-md text-neutral-900 dark:text-white rounded-2xl font-bold text-lg hover:bg-white/20 dark:hover:bg-neutral-700 transition-all border border-neutral-200 dark:border-neutral-700 active:scale-95"
+                        className="px-8 md:px-10 py-3 md:py-4 bg-black/5 dark:bg-neutral-800 backdrop-blur-md text-neutral-900 dark:text-white rounded-2xl font-bold text-base md:text-lg hover:bg-black/10 dark:hover:bg-neutral-700 transition-all border border-neutral-200 dark:border-neutral-700 active:scale-95 w-full sm:w-auto"
                       >
                         Quick Upload
                       </button>
@@ -732,6 +758,31 @@ export default function App() {
                 isUploading={isUploading} 
                 albums={albums}
                 onCancel={() => setView('gallery')}
+                onDriveImport={async () => {
+                   try {
+                    const docs = await openDrivePicker();
+                    const importedFiles: File[] = [];
+                    setIsUploading(true);
+                    
+                    for (const doc of docs) {
+                      const dataUrl = await downloadDriveFile(doc.id);
+                      // Convert to File object for common handling
+                      const res = await fetch(dataUrl);
+                      const blob = await res.blob();
+                      const file = new File([blob], doc.name, { type: doc.mimeType });
+                      importedFiles.push(file);
+                    }
+                    
+                    if (importedFiles.length > 0) {
+                      await handleUpload(importedFiles, '', 'Imported from Google Drive');
+                    }
+                  } catch (err) {
+                    console.error('Drive import failed:', err);
+                    alert("Could not import from Drive. Please ensure you have configured your Google Client ID and API Key in the environment.");
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }}
               />
             )}
           </AnimatePresence>
@@ -754,12 +805,14 @@ const UploadDashboard = ({
   onUpload, 
   isUploading, 
   albums, 
-  onCancel 
+  onCancel,
+  onDriveImport
 }: { 
   onUpload: (files: File[], title: string, description: string, albumId?: string) => void,
   isUploading: boolean,
   albums: Album[],
-  onCancel: () => void
+  onCancel: () => void,
+  onDriveImport: () => void
 }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState('');
@@ -822,13 +875,24 @@ const UploadDashboard = ({
                   {albums.map(a => <option key={a.id} value={a.id} className="bg-white dark:bg-neutral-950">{a.title}</option>)}
                 </select>
               </div>
-              <button
-                onClick={() => onUpload(files, title, description, albumId)}
-                disabled={files.length === 0 || isUploading}
-                className="px-8 py-3 md:py-4 bg-blue-600 text-white rounded-xl md:rounded-2xl font-bold hover:bg-blue-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/40"
-              >
-                {isUploading ? 'Securing...' : 'Publish'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onDriveImport}
+                  disabled={isUploading}
+                  className="p-4 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                  title="Import from Google Drive"
+                >
+                  <CloudDownload className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={() => onUpload(files, title, description, albumId)}
+                  disabled={files.length === 0 || isUploading}
+                  className="flex-1 sm:flex-none px-8 py-3 md:py-4 bg-blue-600 text-white rounded-xl md:rounded-2xl font-bold hover:bg-blue-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/40"
+                >
+                  {isUploading ? 'Securing...' : 'Publish'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

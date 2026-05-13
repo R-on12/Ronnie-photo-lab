@@ -22,7 +22,7 @@
   }
   
   body {
-    @apply antialiased transition-colors duration-300;
+    @apply antialiased transition-colors duration-300 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100;
   }
 }
 
