@@ -55,7 +55,7 @@ const Sidebar = ({
     <aside className="w-64 h-full border-r border-neutral-800 p-6 flex flex-col gap-8 flex-shrink-0 hidden lg:flex">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">C</div>
-        <span className="text-xl font-semibold tracking-tight text-white font-sans uppercase">Coope</span>
+        <span className="text-xl font-cassandra tracking-tight text-white">Coopes</span>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -167,13 +167,28 @@ const Header = ({ search, setSearch, setView, user, currentView }: { search: str
       
       <div className="flex items-center gap-2 md:gap-4">
         {user ? (
-          <button 
-            onClick={() => setView('dashboard')}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Upload</span>
-          </button>
+          <div className="flex items-center gap-2 md:gap-4 font-sans">
+            <button 
+              onClick={() => setView('dashboard')}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Upload</span>
+            </button>
+            
+            <div className="lg:hidden flex items-center gap-1 sm:gap-2 pl-2 border-l border-neutral-800">
+              <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold text-[10px] text-white shrink-0">
+                {user.displayName?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+              </div>
+              <button 
+                onClick={logout}
+                className="p-2 text-neutral-500 hover:text-red-400 transition-colors shrink-0"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         ) : (
           <button 
             onClick={signInWithGoogle}
@@ -447,7 +462,7 @@ export default function App() {
                 <div className="mb-8 p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20">
                   <Camera className="w-12 h-12 text-blue-500" />
                 </div>
-                <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-tighter mb-6 bg-gradient-to-br from-white to-neutral-500 bg-clip-text text-transparent">
+                <h1 className="text-5xl md:text-8xl font-cassandra tracking-tight mb-6 bg-gradient-to-br from-white to-neutral-500 bg-clip-text text-transparent italic">
                   Coopes Gallery
                 </h1>
                 <p className="max-w-xl mx-auto text-lg text-neutral-400 mb-12 leading-relaxed">

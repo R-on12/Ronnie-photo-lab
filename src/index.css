@@ -4,6 +4,7 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", serif;
+  --font-cassandra: "Cassandra", cursive;
   
   --color-brand: #2563eb;
   --color-accent: #171717;
@@ -11,6 +12,15 @@
 }
 
 @layer base {
+  @font-face {
+    font-family: "Cassandra";
+    src: url("https://db.onlinewebfonts.com/t/798939b7a4f7831d86d6349d3e5a52ba.woff2") format("woff2"),
+         url("https://db.onlinewebfonts.com/t/798939b7a4f7831d86d6349d3e5a52ba.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  
   body {
     @apply antialiased text-neutral-100 bg-neutral-950 transition-colors duration-300;
   }
