@@ -201,10 +201,12 @@ const Header = ({
       
       <div className="flex items-center gap-2 md:gap-4">
         <button
+          id="theme-toggle"
           onClick={toggleDarkMode}
-          className="p-2 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          className="p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all hover:scale-105 active:scale-95"
+          aria-label="Toggle theme"
         >
-          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {darkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
         </button>
 
         {user ? (
@@ -217,8 +219,8 @@ const Header = ({
               <span className="hidden sm:inline">Upload</span>
             </button>
             
-            <div className="lg:hidden flex items-center gap-1 sm:gap-2 pl-2 border-l border-neutral-800">
-              <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold text-[10px] text-white shrink-0">
+            <div className="lg:hidden flex items-center gap-1 sm:gap-2 pl-2 border-l border-neutral-200 dark:border-neutral-800">
+              <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center font-bold text-[10px] text-neutral-900 dark:text-white shrink-0">
                 {user.displayName?.split(' ').map((n: string) => n[0]).join('') || 'U'}
               </div>
               <button 
@@ -381,7 +383,11 @@ export default function App() {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [search, setSearch] = useState('');
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -530,8 +536,10 @@ export default function App() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 

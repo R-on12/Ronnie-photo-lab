@@ -26,25 +26,33 @@ export const initGoogleClient = () => {
         return reject(new Error("Google APIs not loaded"));
       }
 
+      if (!CLIENT_ID || !API_KEY || !APP_ID) {
+        console.warn("Google Drive API credentials not found in environment variables.");
+        return resolve(); // Resolve instead of reject to avoid global error tracking, but log warning
+      }
+
       gapi.load("client:picker", async () => {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: DISCOVERY_DOCS,
-        });
-        
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: async (response: any) => {
-            if (response.error !== undefined) {
-              throw response;
-            }
-            accessToken = response.access_token;
-            resolve();
-          },
-        });
-        
-        resolve();
+        try {
+          await gapi.client.init({
+            apiKey: API_KEY,
+            discoveryDocs: DISCOVERY_DOCS,
+          });
+          
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: async (response: any) => {
+              if (response.error !== undefined) {
+                throw response;
+              }
+              accessToken = response.access_token;
+            },
+          });
+          
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
       });
     } catch (err) {
       reject(err);
@@ -56,6 +64,14 @@ export const openDrivePicker = async (): Promise<any[]> => {
   return new Promise((resolve, reject) => {
     const gapi = (window as any).gapi;
     const google = (window as any).google;
+
+    if (!CLIENT_ID || !API_KEY || !APP_ID) {
+      return reject(new Error("Google Drive integration is not configured. Please add VITE_GOOGLE_CLIENT_ID, VITE_GOOGLE_API_KEY, and VITE_GOOGLE_APP_ID to your environment variables."));
+    }
+
+    if (!tokenClient) {
+      return reject(new Error("Google Identity Services client not initialized."));
+    }
 
     if (!accessToken) {
       tokenClient.callback = (response: any) => {
